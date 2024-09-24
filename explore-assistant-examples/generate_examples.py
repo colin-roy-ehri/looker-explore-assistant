@@ -8,6 +8,21 @@ import urllib.parse
 import re
 import argparse
 import os
+import subprocess
+
+# Function to call load_examples.py
+def load_examples(project_id, dataset_id, table_id, column_name, explore_id, json_file):
+    command = [
+        "python", "load_examples.py",
+        "--project_id", project_id,
+        "--dataset_id", dataset_id,
+        "--table_id", table_id,
+        "--column_name", column_name,
+        "--explore_id", explore_id,
+        "--json_file", json_file
+    ]
+    subprocess.run(command)
+
 
 # Initialize Looker SDK using environment variables
 def init_looker_sdk():
@@ -236,24 +251,42 @@ def generate_input_examples(sdk, model, explore):
     url_prompts = []
 
     data = fetch_query_url_metadata(sdk, explore)
-    categorized_queries = categorize_urls(data,sdk)
+    categorized_queries = categorize_urls(data, sdk)
     for key in categorized_queries.keys():
         if isinstance(categorized_queries[key], list):
             for url in categorized_queries[key][0:3]:
-                url_prompts.append(generate_input(json.dumps({"input": "", "output": url})) + '\n')
+                response = generate_input(json.dumps({"input": "", "output": url}))
+                # Remove ```json and ``` symbols
+                cleaned_response = re.sub(r'```json\n|```', '', response).strip()
+                if cleaned_response:
+                    try:
+                        url_prompts.append(json.loads(cleaned_response))
+                    except json.JSONDecodeError as e:
+                        print(f"Failed to decode JSON: {e}")
+                        print(f"Response: {cleaned_response}")
+                else:
+                    print("Empty response received from generate_input")
         else:
             for key2 in categorized_queries[key].keys():
                 for url in categorized_queries[key][key2][0:3]:
-                    url_prompts.append(generate_input(json.dumps({"input": "", "output": url})) + '\n')
+                    response = generate_input(json.dumps({"input": "", "output": url}))
+                    # Remove ```json and ``` symbols
+                    cleaned_response = re.sub(r'```json\n|```', '', response).strip()
+                    if cleaned_response:
+                        try:
+                            url_prompts.append(json.loads(cleaned_response))
+                        except json.JSONDecodeError as e:
+                            print(f"Failed to decode JSON: {e}")
+                            print(f"Response: {cleaned_response}")
+                    else:
+                        print("Empty response received from generate_input")
 
+    # Write the JSON objects to the file as a list
     with open(f"./generated_examples/{model}:{explore}.inputs.txt", "w") as f:
-        # replace ```json and ``` with empty string
-        url_prompts = [re.sub(r'```json', '', url) for url in url_prompts]
-        url_prompts = [re.sub(r'```', '', url) for url in url_prompts]
-        f.writelines(url_prompts)
+        json.dump(url_prompts, f, indent=4)
 
 # Main function to create example files
-def create_example_files(model, explore, project_id, location):
+def create_example_files(model, explore, project_id, location, chain_load):
     sdk = init_looker_sdk()
 
     # Fetch Explore Metadata into files
@@ -265,6 +298,12 @@ def create_example_files(model, explore, project_id, location):
     vertexai.init(project=project_id, location=location)
     generate_input_examples(sdk, model, explore)
 
+
+    # Optionally call load_examples.py
+    if chain_load:
+        json_file = f"./generated_examples/{model}:{explore}.inputs.txt"
+        load_examples(project_id, "explore_assistant", "explore_assistant_examples", "examples", f"{model}:{explore}", json_file)
+
 # Command-line argument parsing
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate example files for a given explore.")
@@ -272,6 +311,7 @@ if __name__ == "__main__":
     parser.add_argument("--explore", required=True, help="Looker explore name.")
     parser.add_argument("--project_id", required=True, help="Google Cloud project ID")
     parser.add_argument("--location", required=True, help="Google Cloud location")
+    parser.add_argument("--chain_load", action="store_true", help="Load examples into BigQuery after generating them")
     args = parser.parse_args()
 
-    create_example_files(args.model, args.explore, args.project_id, args.location)
+    create_example_files(args.model, args.explore, args.project_id, args.location, args.chain_load)  
