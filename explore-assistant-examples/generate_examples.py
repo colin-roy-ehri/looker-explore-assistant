@@ -214,10 +214,10 @@ def generate_input(request):
     prompt_prefix = '''You are a specialized assistant that translates Looker Explore query URL's into natural language questions. By reading the different parameters of the url (like the fields used, filters, etc.) you are able to generate a natural language question.
         Please do not use the example fields such as 'user_order_facts', instead use fields relvant to the fields in the "output".
         That means if the "output" provided has no 'user_order_facts', don't return a question about users or orders, but instead return a result relevant to the types of fields in the output.
-        Please keep the "iinput" short and concise using 1-2 sentences max in your repsonse. Make sure to generate a response that sounds like it's coming from an average person and not a data analyst who is very familiar with the data. Each request will contain an "input" and an "output" field. The "output" field will be the Looker Explore query url. The "input" field will be the natural language question that you will fill in/generate.
+        Please keep the "input" short and concise using 1-2 sentences max in your repsonse. Make sure to generate a response that sounds like it's coming from an average person and not a data analyst who is very familiar with the data. Each request will contain an "input" and an "output" field. The "output" field will be the Looker Explore query url. The "input" field will be the natural language question that you will fill in/generate.
         Here is an example of a properly formatted response:
         {"input": "customer with lifetime revenue > 100", "output": "fields=user_order_facts.lifetime_revenue&f[user_order_facts.lifetime_revenue]=>100&sorts=user_order_facts.lifetime_revenue desc 0&limit=500"}
-        Here is an output that needs a matching input response: '''
+        Please alwasy respond with a only a json object with the fields 'input' and 'output', as you see above. Please do not respond in markup or using markup tags like ```. Here is an output that needs a matching input response you generate: '''
     model = GenerativeModel("gemini-pro")
     response = model.generate_content(
         contents=prompt_prefix + request,
@@ -247,6 +247,9 @@ def generate_input_examples(sdk, model, explore):
                     url_prompts.append(generate_input(json.dumps({"input": "", "output": url})) + '\n')
 
     with open(f"./generated_examples/{model}:{explore}.inputs.txt", "w") as f:
+        # replace ```json and ``` with empty string
+        url_prompts = [re.sub(r'```json', '', url) for url in url_prompts]
+        url_prompts = [re.sub(r'```', '', url) for url in url_prompts]
         f.writelines(url_prompts)
 
 # Main function to create example files

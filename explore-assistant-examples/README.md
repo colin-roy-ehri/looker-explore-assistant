@@ -96,8 +96,10 @@ The generate_examples.py script accepts several command line arguments to specif
 The generate_examples.py script fetches information about an explores' fields and top queries. It calls Gemini to generate sample questions that could be answered by the top queries. These can be tuned or used directly as examples to upload to the Explore Assistant.
 
 ```bash
-python generate_examples.py --model YOUR_MODEL_NAME --explore YOUR_EXPLORE_NAME --project_id YOUR_PROJECT_ID --location YOUR_LOCATION
+python generate_examples.py --model YOUR_MODEL_NAME --explore YOUR_EXPLORE_NAME --project_id YOUR_GCP_PROJECT_ID --location YOUR_GCP_LOCATION
 ```
    
-
-
+If desired, you can directly upload the files after generation by using the --chain_load argument.
+```bash
+python generate_examples.py --model YOUR_MODEL_NAME --explore YOUR_EXPLORE_NAME --project_id YOUR_GCP_PROJECT_ID --location YOUR_GCP_LOCATION --chain_load
+```
