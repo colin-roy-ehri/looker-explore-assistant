@@ -98,7 +98,7 @@ The generate_examples.py script accepts several command line arguments to specif
 - `--project_id`: Required. Google Cloud project ID.
 - `--location`: Required. Google Cloud location.
 
-### Running the Generation Script
+# Running the Generation Script
 The generate_examples.py script fetches information about an explores' fields and top queries. It calls Gemini to generate sample questions that could be answered by the top queries. These can be tuned or used directly as examples to upload to the Explore Assistant.
 
 ```bash
